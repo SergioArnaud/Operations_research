@@ -1,7 +1,44 @@
+from unionfind import UnionFind
 from heapq import heappush, heappop 
 import numpy
 from numpy import inf
 
+class Tree:
+    
+    def __init__(self, directed = False,  weighted = False):
+
+        self.directed = directed
+        self.weighted = weighted
+        self.tree = {}
+        self.vertex_num = 0
+        self.vertex = []
+        self.components = UnionFind()
+        
+    def add_edge(self, origin, destiny, weight=0):
+        
+        def add_vertex(self, vertex):
+            if not vertex in self.tree.keys():
+                self.components.add(vertex)
+                self.tree[vertex] = {}
+                self.vertex_num += 1
+                self.vertex.append(vertex)
+        
+        if not origin in self.tree.keys():
+            add_vertex(self,origin)
+            
+        if not destiny in self.tree.keys():
+            add_vertex(self,destiny)
+            
+        if self.components.connected(origin, destiny):
+            raise Exception("Cannot add edge, would create a cicle")
+
+        self.tree[origin][destiny] = weight
+        if not self.directed:
+            self.tree[destiny][origin] = weight
+        
+        self.components.union(origin,destiny)
+        
+    
 class Graph:
 
     def __init__(self, directed = False,  weighted = False):
@@ -10,6 +47,10 @@ class Graph:
         self.weighted = weighted
         self.graph = {}
         self.vertex_num = 0
+        self.edge_num = 0
+        self.cost_matrix = {}
+        self.edge_list = []
+        
 
     def add_vertex(self, vertex):
         if not vertex in self.graph.keys():
@@ -27,7 +68,9 @@ class Graph:
         self.graph[origin][destiny] = weight
         if not self.directed:
             self.graph[destiny][origin] = weight
-            
+        
+        self.edge_list.append((weight, origin, destiny))
+        self.edge_num += 1
             
     def get_cost_matrix(self):
         
@@ -40,9 +83,9 @@ class Graph:
                     Cost[i][j] = graph[i][j]
                 else:
                     Cost[i][j] = 0 if i==j else inf
-        return Cost
-                   
         
+        self.cost_matrix = Cost
+                   
     
     def SSSP(self, source, get_paths = False, algorithm = 'dijkstra'):
         '''
@@ -68,7 +111,72 @@ class Graph:
         
         raise Exception("Algorithm mispelled or not available")
         
+    
+    def MST(self, algorithm = 'kruskal', root = '') :
+        '''
+            Minimum spanning tree
+        '''
         
+        if algorithm == 'kruskal':
+            return self._kruskal()
+        
+        if algorithm == 'prim':
+            if not root:
+                root = list(self.graph.keys())[0]
+            return self._prim(root)
+        
+        raise Exception("Algorithm mispelled or not available")
+    
+    
+    def _kruskal(self):
+        
+        graph = self.graph
+        edge_list = sorted(self.edge_list)
+        
+        uf = UnionFind(list(graph.keys()))
+        
+        tree = Tree(weighted=True)
+        minimum_cost = 0
+        
+        for cost, u, v in edge_list:
+            
+            if uf.n_comps == 1:
+                break
+                
+            if not uf.connected(u,v):
+                uf.union(u,v)
+                minimum_cost += cost
+                tree.add_edge(u,v,cost)
+                
+        return minimum_cost, tree
+        
+        
+    def _prim(self, root):
+        
+        graph = self.graph
+        heap = []
+        
+        tree = Tree(weighted=True)
+        minimum_cost = 0
+        
+        for v in graph[root]:
+            heappush(heap, (graph[root][v], root, v ))
+
+        while self.vertex_num != tree.vertex_num :
+            
+            cost, u, v = heappop(heap)
+            
+            if v in tree.vertex:
+                continue
+
+            minimum_cost += cost
+            tree.add_edge(u,v,cost)
+
+            for u in graph[v]:
+                if not u in tree.vertex:
+                    heappush(heap, (graph[v][u], v, u))
+        
+        return minimum_cost, tree
         
     def _floyd_warshall(self):
         
@@ -83,8 +191,10 @@ class Graph:
         
         '''
         
+        self.get_cost_matrix()
+        
         graph = self.graph
-        Cost = self.get_cost_matrix()
+        Cost = self.cost_matrix
                         
         for i in graph.keys():
             for j in graph.keys():
