@@ -2,6 +2,7 @@ from unionfind import UnionFind
 from heapq import heappush, heappop 
 import numpy
 from numpy import inf
+import queue
 
 class Tree:
     
@@ -128,6 +129,43 @@ class Graph:
         raise Exception("Algorithm mispelled or not available")
     
     
+    def has_negative_cycle(self):
+        
+        Cost = self._floyd_warshall()
+        
+        for vertex in Cost.keys():
+            if Cost[vertex][vertex] < 0:
+                return True
+        
+        return False
+        
+        
+    def _dfs(self, root, dis):
+        
+        for v in self.graph[root]:
+            if not v in dis:
+                dis[v] = dis[root] + 1
+                dis = self._dfs(v, dis)
+        
+        return dis
+    
+    def _bfs(self, root):
+        
+        dis = {root:0}
+        
+        q = queue.Queue()
+        q.put(root)
+        
+        while not q.empty():
+            u = q.get()
+            for v in self.graph[u]:
+                if not v in dis:
+                    dis[v] = dis[u]+1
+                    q.put(v)
+        
+        return dis
+        
+        
     def _kruskal(self):
         
         graph = self.graph
